@@ -1,0 +1,5 @@
+{
+  "name": "Stoic Minds",
+  "description": "A minimalist quote display application focusing on stoicism and power dynamics, featuring customizable intervals, themes, and robust text parsing.",
+  "requestFramePermissions": []
+}
