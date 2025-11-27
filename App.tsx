@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
-import { Settings, Maximize, Upload, RefreshCw, X, Palette, MoveHorizontal, MoveVertical } from 'lucide-react';
+import { Settings, Upload, RefreshCw, X, Palette, MoveHorizontal, MoveVertical, Layers } from 'lucide-react';
 import { parseQuotes } from './utils/parser';
 import { rawDefaultQuotes } from './data/defaultQuotes';
 import { Quote, AppSettings, DEFAULT_SETTINGS, ThemeOption, FontSizeOption } from './types';
@@ -7,12 +8,12 @@ import { Quote, AppSettings, DEFAULT_SETTINGS, ThemeOption, FontSizeOption } fro
 // --- Theme Definitions ---
 interface ThemeDef {
   label: string;
-  bg: string;
+  bg: string; // Page background
+  container: string; // Widget container style
   text: string;
   secondaryText: string;
   buttonBg: string;
-  buttonHover: string;
-  isDark: boolean; // Used to trigger Tailwind's 'dark' mode for UI elements
+  isDark: boolean;
   swatch: string;
 }
 
@@ -20,61 +21,71 @@ const THEMES: Record<ThemeOption | 'auto', ThemeDef | null> = {
   auto: null,
   light: { 
     label: 'Light', 
-    bg: 'bg-stone-50', 
+    bg: 'bg-stone-50',
+    container: 'bg-white border-stone-200 shadow-xl', 
     text: 'text-stone-900', 
     secondaryText: 'text-stone-500',
-    buttonBg: 'bg-stone-200',
-    buttonHover: 'hover:bg-stone-300',
+    buttonBg: 'bg-stone-200 hover:bg-stone-300',
     isDark: false,
     swatch: 'bg-stone-50 border-stone-300'
   },
   dark: { 
     label: 'Dark', 
     bg: 'bg-stone-950', 
+    container: 'bg-stone-900 border-stone-800 shadow-2xl shadow-black/50',
     text: 'text-stone-100', 
     secondaryText: 'text-stone-500',
-    buttonBg: 'bg-stone-800',
-    buttonHover: 'hover:bg-stone-700',
+    buttonBg: 'bg-stone-800 hover:bg-stone-700',
     isDark: true,
     swatch: 'bg-stone-900 border-stone-700'
+  },
+  glass: { 
+    label: 'Glass', 
+    bg: 'bg-stone-900', // Default bg if transparency is off
+    container: 'bg-white/10 backdrop-blur-xl border-white/20 shadow-2xl shadow-black/20',
+    text: 'text-white drop-shadow-sm', 
+    secondaryText: 'text-white/60',
+    buttonBg: 'bg-white/10 hover:bg-white/20 backdrop-blur-md',
+    isDark: true,
+    swatch: 'bg-gradient-to-br from-white/20 to-black/20 border-white/30'
   },
   sepia: { 
     label: 'Sepia', 
     bg: 'bg-[#f4ecd8]', 
+    container: 'bg-[#fbf6e9] border-[#e6dbb9] shadow-xl',
     text: 'text-[#433422]', 
     secondaryText: 'text-[#8a7658]',
-    buttonBg: 'bg-[#e6dbb9]',
-    buttonHover: 'hover:bg-[#d6cba9]',
+    buttonBg: 'bg-[#e6dbb9] hover:bg-[#d6cba9]',
     isDark: false,
     swatch: 'bg-[#f4ecd8] border-[#d6cba9]'
   },
   ocean: { 
     label: 'Ocean', 
     bg: 'bg-slate-900', 
+    container: 'bg-slate-800 border-slate-700 shadow-xl shadow-cyan-900/20',
     text: 'text-cyan-50', 
-    secondaryText: 'text-cyan-700',
-    buttonBg: 'bg-slate-800',
-    buttonHover: 'hover:bg-slate-700',
+    secondaryText: 'text-cyan-500',
+    buttonBg: 'bg-slate-700 hover:bg-slate-600',
     isDark: true,
     swatch: 'bg-slate-900 border-cyan-900'
   },
   forest: { 
     label: 'Forest', 
     bg: 'bg-[#0a1f12]', 
+    container: 'bg-[#11291b] border-[#1f4a30] shadow-xl shadow-emerald-900/20',
     text: 'text-[#e0f2e9]', 
-    secondaryText: 'text-[#3d664f]',
-    buttonBg: 'bg-[#143320]',
-    buttonHover: 'hover:bg-[#1f4a30]',
+    secondaryText: 'text-[#4d8063]',
+    buttonBg: 'bg-[#1f4a30] hover:bg-[#2a5c3e]',
     isDark: true,
     swatch: 'bg-[#0a1f12] border-emerald-900'
   },
   rose: { 
     label: 'Rose', 
     bg: 'bg-[#2a0a12]', 
+    container: 'bg-[#3d0f1b] border-[#591c2b] shadow-xl shadow-rose-900/20',
     text: 'text-[#fce7f3]', 
-    secondaryText: 'text-[#823a52]',
-    buttonBg: 'bg-[#4a1220]',
-    buttonHover: 'hover:bg-[#61182a]',
+    secondaryText: 'text-[#9e4c66]',
+    buttonBg: 'bg-[#591c2b] hover:bg-[#702436]',
     isDark: true,
     swatch: 'bg-[#2a0a12] border-rose-900'
   }
@@ -102,10 +113,10 @@ const SettingsModal = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white dark:bg-stone-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-stone-200 dark:border-stone-700 flex flex-col max-h-[90vh]">
+      <div className="bg-white dark:bg-stone-800 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden border border-stone-200 dark:border-stone-700 flex flex-col max-h-[85vh]">
         <div className="p-4 border-b border-stone-200 dark:border-stone-700 flex justify-between items-center bg-stone-50 dark:bg-stone-900 shrink-0">
           <h2 className="text-lg font-serif font-bold text-stone-800 dark:text-stone-100 flex items-center gap-2">
-            <Settings size={18} /> Preferences
+            <Settings size={18} /> Widget Settings
           </h2>
           <button onClick={onClose} className="p-2 hover:bg-stone-200 dark:hover:bg-stone-700 rounded-full transition-colors">
             <X size={20} className="text-stone-600 dark:text-stone-300" />
@@ -117,8 +128,22 @@ const SettingsModal = ({
           {/* Theme */}
           <section>
             <h3 className="text-xs font-sans font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-              <Palette size={14} /> Theme
+              <Palette size={14} /> Style
             </h3>
+            
+            {/* Transparent Toggle */}
+            <div className="mb-4 flex items-center justify-between p-3 bg-stone-100 dark:bg-stone-900/50 rounded-xl">
+              <span className="text-sm text-stone-700 dark:text-stone-300 flex items-center gap-2">
+                <Layers size={16} /> Transparent Background
+              </span>
+              <button 
+                  onClick={() => onUpdate({ transparentBackground: !settings.transparentBackground })}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.transparentBackground ? 'bg-blue-500' : 'bg-stone-300 dark:bg-stone-600'}`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${settings.transparentBackground ? 'translate-x-6' : 'translate-x-1'}`} />
+                </button>
+            </div>
+
             <div className="grid grid-cols-4 gap-3">
               {(Object.keys(THEMES) as ThemeOption[]).map((t) => {
                 const isActive = settings.theme === t;
@@ -162,7 +187,7 @@ const SettingsModal = ({
           {/* Sizing & Layout */}
           <section>
             <h3 className="text-xs font-sans font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-              <MoveHorizontal size={14} /> Display
+              <MoveHorizontal size={14} /> Dimensions
             </h3>
             
             {/* Font Size */}
@@ -191,7 +216,7 @@ const SettingsModal = ({
             <div className="mb-6">
               <div className="flex justify-between items-center mb-2">
                 <label className="text-sm text-stone-600 dark:text-stone-400 flex items-center gap-2">
-                  <MoveHorizontal size={14} /> Box Width
+                  <MoveHorizontal size={14} /> Widget Width
                 </label>
                 <span className="text-xs text-stone-400 font-mono">{settings.containerWidth}%</span>
               </div>
@@ -210,7 +235,7 @@ const SettingsModal = ({
             <div>
               <div className="flex justify-between items-center mb-2">
                 <label className="text-sm text-stone-600 dark:text-stone-400 flex items-center gap-2">
-                  <MoveVertical size={14} /> Box Height
+                  <MoveVertical size={14} /> Widget Height
                 </label>
                 <span className="text-xs text-stone-400 font-mono">{settings.containerHeight}%</span>
               </div>
@@ -234,7 +259,7 @@ const SettingsModal = ({
             
             <div className="space-y-4">
               <div className="space-y-2">
-                 <label className="text-sm text-stone-600 dark:text-stone-400">Refresh Interval</label>
+                 <label className="text-sm text-stone-600 dark:text-stone-400">Auto-Refresh Interval</label>
                  <select 
                   value={settings.interval} 
                   onChange={(e) => onUpdate({ interval: Number(e.target.value) })}
@@ -302,7 +327,6 @@ const App: React.FC = () => {
   const [currentQuote, setCurrentQuote] = useState<Quote | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const [loading, setLoading] = useState(true);
   
   // Resolve current active theme styles
@@ -314,11 +338,11 @@ const App: React.FC = () => {
     return THEMES[settings.theme];
   })();
 
-  const themeStyles = activeThemeDef || THEMES.light;
+  const themeStyles = activeThemeDef || THEMES.glass;
 
   // --- Effects ---
 
-  // 1. Initialize Theme Classes on HTML/Body and 'Dark' mode for Modal
+  // 1. Initialize Theme Classes
   useEffect(() => {
     const root = window.document.documentElement;
     // Determine if we should be in 'dark mode' for UI components like the modal
@@ -344,7 +368,6 @@ const App: React.FC = () => {
       setQuotes(parsed);
       
       if (parsed.length > 0 && !currentQuote) {
-        // Pick initial random quote
         const random = parsed[Math.floor(Math.random() * parsed.length)];
         setCurrentQuote(random);
       }
@@ -379,7 +402,7 @@ const App: React.FC = () => {
       requestAnimationFrame(() => {
         setIsTransitioning(false);
       });
-    }, 500); // 500ms fade out
+    }, 400); // Quick fade out for snappy widget feel
   }, [quotes, currentQuote]);
 
   useEffect(() => {
@@ -402,7 +425,6 @@ const App: React.FC = () => {
       if (text) {
         localStorage.setItem('custom-quotes-text', text);
         setSettings(prev => ({ ...prev, isCustomSource: true }));
-        // Force reload of quotes happens in Effect 2
       }
     };
     reader.readAsText(file);
@@ -414,53 +436,37 @@ const App: React.FC = () => {
     setSettings(prev => ({ ...prev, isCustomSource: false }));
   };
 
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch((e) => {
-        console.error(`Error attempting to enable full-screen mode: ${e.message} (${e.name})`);
-      });
-      setIsFullscreen(true);
-    } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen();
-        setIsFullscreen(false);
-      }
-    }
-  };
-
-  // Detect fullscreen change (e.g., user pressed Esc)
-  useEffect(() => {
-    const handleFsChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-    document.addEventListener('fullscreenchange', handleFsChange);
-    return () => document.removeEventListener('fullscreenchange', handleFsChange);
-  }, []);
-
   // --- Render Helpers ---
 
   const getFontSizeClass = () => {
     switch (settings.fontSize) {
-      case 'sm': return 'text-lg md:text-xl leading-relaxed';
-      case 'lg': return 'text-3xl md:text-5xl leading-tight';
-      case 'xl': return 'text-4xl md:text-6xl leading-tight';
+      case 'sm': return 'text-lg leading-relaxed';
+      case 'lg': return 'text-3xl leading-tight';
+      case 'xl': return 'text-4xl leading-tight';
       case 'md':
-      default: return 'text-2xl md:text-4xl leading-relaxed';
+      default: return 'text-2xl leading-relaxed';
     }
   };
 
   if (loading) {
     return (
-      <div className={`min-h-screen flex items-center justify-center ${themeStyles?.bg} ${themeStyles?.text}`}>
-        <div className="animate-pulse">Loading Wisdom...</div>
+      <div className={`min-h-screen flex items-center justify-center ${settings.transparentBackground ? 'bg-transparent' : themeStyles?.bg} ${themeStyles?.text}`}>
       </div>
     );
   }
 
   return (
     <div 
-      className={`relative min-h-screen w-full transition-colors duration-700 overflow-hidden flex flex-col items-center justify-center ${themeStyles?.bg}`}
+      className={`relative min-h-screen w-full transition-colors duration-700 overflow-hidden flex flex-col items-center justify-center`}
+      style={{
+        backgroundColor: settings.transparentBackground ? 'transparent' : undefined
+      }}
     >
+      {/* If not transparent, use theme bg */}
+      {!settings.transparentBackground && (
+        <div className={`absolute inset-0 z-[-1] transition-colors duration-700 ${themeStyles?.bg}`} />
+      )}
+
       {/* Settings Modal */}
       <SettingsModal 
         isOpen={isSettingsOpen} 
@@ -471,65 +477,54 @@ const App: React.FC = () => {
         resetSource={handleResetSource}
       />
 
-      {/* Control Bar (Hidden in Fullscreen if user desires, but useful to have accessible) */}
-      <div 
-        className={`fixed top-0 left-0 right-0 p-4 flex justify-between items-center z-40 transition-opacity duration-300 ${isFullscreen ? 'opacity-0 hover:opacity-100' : 'opacity-100'}`}
+      {/* Floating Settings Button (Bottom Right) */}
+      <button 
+        onClick={() => setIsSettingsOpen(true)}
+        className={`fixed bottom-6 right-6 p-3 rounded-full z-40 transition-all duration-300 opacity-30 hover:opacity-100 ${themeStyles?.buttonBg} ${themeStyles?.text} shadow-lg backdrop-blur-md`}
+        aria-label="Settings"
       >
-        <button 
-          onClick={toggleFullscreen}
-          className={`p-2 rounded-full transition-all ${themeStyles?.buttonBg} ${themeStyles?.text} bg-opacity-50 hover:bg-opacity-80 backdrop-blur-sm`}
-          aria-label="Toggle Fullscreen"
-        >
-          <Maximize size={20} />
-        </button>
-
-        <button 
-          onClick={() => setIsSettingsOpen(true)}
-          className={`p-2 rounded-full transition-all ${themeStyles?.buttonBg} ${themeStyles?.text} bg-opacity-50 hover:bg-opacity-80 backdrop-blur-sm`}
-          aria-label="Settings"
-        >
-          <Settings size={20} />
-        </button>
-      </div>
+        <Settings size={20} />
+      </button>
 
       {/* Main Content Area */}
-      <main className="flex-1 w-full h-full flex items-center justify-center p-6 relative">
+      <main className="flex-1 w-full h-full flex items-center justify-center p-4 relative">
         
-        {/* Quote Container with Dynamic Width and Height */}
-        {/* Widget Style: Rounded corners, border, shadow */}
+        {/* Quote Widget Card */}
         <div 
+           onClick={changeQuote}
            className={`
              transition-all duration-300 ease-in-out flex flex-col items-center justify-center text-center relative
-             rounded-[2.5rem] shadow-2xl border-2 border-opacity-10 border-current
+             rounded-[2rem] border-2 border-opacity-20 cursor-pointer active:scale-95 select-none
+             ${themeStyles?.container}
              ${themeStyles?.text}
            `}
            style={{ 
              width: `${settings.containerWidth}%`, 
              height: `${settings.containerHeight}%`,
-             maxWidth: '1400px'
+             maxWidth: '1200px'
            }}
         >
-          {/* Inner Wrapper for scrolling if text exceeds height, but centered if it doesn't */}
-          <div className="w-full h-full overflow-y-auto no-scrollbar flex flex-col items-center justify-center py-4 px-2">
+          {/* Inner Wrapper for scrolling */}
+          <div className="w-full h-full overflow-y-auto no-scrollbar flex flex-col items-center justify-center py-6 px-4">
             {currentQuote && (
               <div 
                 className={`
-                  transform transition-all duration-1000 ease-in-out
-                  ${isTransitioning ? 'opacity-0 translate-y-4 blur-sm' : 'opacity-100 translate-y-0 blur-0'}
+                  transform transition-all duration-500 ease-out
+                  ${isTransitioning ? 'opacity-0 scale-95 blur-sm' : 'opacity-100 scale-100 blur-0'}
                   max-w-full
                 `}
               >
-                <p className={`font-serif font-medium ${getFontSizeClass()} mb-8 select-none`}>
+                <p className={`font-serif font-medium ${getFontSizeClass()} mb-6`}>
                   {currentQuote.text}
                 </p>
 
                 {settings.showAuthor && currentQuote.author && (
-                  <div className={`flex items-center justify-center gap-4 animate-fade-in`}>
-                    <span className={`h-px w-8 ${themeStyles?.secondaryText} opacity-50`}></span>
-                    <p className={`font-sans text-sm md:text-base tracking-widest uppercase ${themeStyles?.secondaryText}`}>
+                  <div className={`flex items-center justify-center gap-3 animate-fade-in mt-auto`}>
+                    <span className={`h-px w-6 ${themeStyles?.secondaryText} opacity-40 bg-current`}></span>
+                    <p className={`font-sans text-xs md:text-sm tracking-widest uppercase font-bold ${themeStyles?.secondaryText}`}>
                       {currentQuote.author}
                     </p>
-                    <span className={`h-px w-8 ${themeStyles?.secondaryText} opacity-50`}></span>
+                    <span className={`h-px w-6 ${themeStyles?.secondaryText} opacity-40 bg-current`}></span>
                   </div>
                 )}
               </div>
@@ -537,13 +532,6 @@ const App: React.FC = () => {
           </div>
         </div>
       </main>
-
-      {/* Manual Refresh Tap Area (Bottom) - Only occupies bottom edge so it doesn't interfere with potential low quote boxes */}
-      <div 
-        className="fixed bottom-0 left-0 right-0 h-16 z-10 cursor-pointer"
-        onClick={changeQuote}
-        aria-label="Tap to change quote"
-      />
     </div>
   );
 };
