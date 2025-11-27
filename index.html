@@ -4,6 +4,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    
+    <!-- PWA / Mobile Web App Capable -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#000000">
+    
     <title>Stoic Minds</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
@@ -42,9 +49,11 @@
       body, #root {
         height: 100%;
         background-color: transparent;
+        overflow: hidden; /* Prevent body scroll, let React handle it */
       }
       body {
         -webkit-tap-highlight-color: transparent;
+        overscroll-behavior: none;
       }
     </style>
   <script type="importmap">

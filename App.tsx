@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { Settings, Upload, RefreshCw, X, Palette, MoveHorizontal, MoveVertical, Layers } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Settings, Upload, RefreshCw, X, Palette, MoveHorizontal, MoveVertical, Layers, Smartphone } from 'lucide-react';
 import { parseQuotes } from './utils/parser';
 import { rawDefaultQuotes } from './data/defaultQuotes';
 import { Quote, AppSettings, DEFAULT_SETTINGS, ThemeOption, FontSizeOption } from './types';
@@ -91,6 +91,30 @@ const THEMES: Record<ThemeOption | 'auto', ThemeDef | null> = {
   }
 };
 
+// --- Custom Hook: Long Press ---
+const useLongPress = (callback: () => void, ms = 800) => {
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const start = useCallback(() => {
+    timerRef.current = setTimeout(callback, ms);
+  }, [callback, ms]);
+
+  const stop = useCallback(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
+
+  return {
+    onMouseDown: start,
+    onMouseUp: stop,
+    onMouseLeave: stop,
+    onTouchStart: start,
+    onTouchEnd: stop,
+  };
+};
+
 // --- Sub-components ---
 
 // 1. Settings Modal
@@ -116,7 +140,7 @@ const SettingsModal = ({
       <div className="bg-white dark:bg-stone-800 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden border border-stone-200 dark:border-stone-700 flex flex-col max-h-[85vh]">
         <div className="p-4 border-b border-stone-200 dark:border-stone-700 flex justify-between items-center bg-stone-50 dark:bg-stone-900 shrink-0">
           <h2 className="text-lg font-serif font-bold text-stone-800 dark:text-stone-100 flex items-center gap-2">
-            <Settings size={18} /> Widget Settings
+            <Settings size={18} /> Settings
           </h2>
           <button onClick={onClose} className="p-2 hover:bg-stone-200 dark:hover:bg-stone-700 rounded-full transition-colors">
             <X size={20} className="text-stone-600 dark:text-stone-300" />
@@ -131,6 +155,24 @@ const SettingsModal = ({
               <Palette size={14} /> Style
             </h3>
             
+            {/* Widget Mode Toggle */}
+             <div className="mb-4 flex items-center justify-between p-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 rounded-xl">
+              <div className="flex flex-col">
+                <span className="text-sm font-medium text-stone-700 dark:text-stone-200 flex items-center gap-2">
+                  <Smartphone size={16} /> Widget Mode
+                </span>
+                <span className="text-[10px] text-stone-500 dark:text-stone-400 mt-1">
+                  Hides UI buttons. Long press screen to open settings.
+                </span>
+              </div>
+              <button 
+                  onClick={() => onUpdate({ isWidgetMode: !settings.isWidgetMode })}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.isWidgetMode ? 'bg-indigo-500' : 'bg-stone-300 dark:bg-stone-600'}`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${settings.isWidgetMode ? 'translate-x-6' : 'translate-x-1'}`} />
+                </button>
+            </div>
+
             {/* Transparent Toggle */}
             <div className="mb-4 flex items-center justify-between p-3 bg-stone-100 dark:bg-stone-900/50 rounded-xl">
               <span className="text-sm text-stone-700 dark:text-stone-300 flex items-center gap-2">
@@ -329,6 +371,11 @@ const App: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   
+  // Custom long press hook to open settings when UI is hidden
+  const longPressProps = useLongPress(() => {
+    setIsSettingsOpen(true);
+  }, 1000); // 1 second hold
+
   // Resolve current active theme styles
   const activeThemeDef = (() => {
     if (settings.theme === 'auto') {
@@ -461,6 +508,7 @@ const App: React.FC = () => {
       style={{
         backgroundColor: settings.transparentBackground ? 'transparent' : undefined
       }}
+      {...longPressProps} // Bind long press to the whole background container
     >
       {/* If not transparent, use theme bg */}
       {!settings.transparentBackground && (
@@ -477,14 +525,16 @@ const App: React.FC = () => {
         resetSource={handleResetSource}
       />
 
-      {/* Floating Settings Button (Bottom Right) */}
-      <button 
-        onClick={() => setIsSettingsOpen(true)}
-        className={`fixed bottom-6 right-6 p-3 rounded-full z-40 transition-all duration-300 opacity-30 hover:opacity-100 ${themeStyles?.buttonBg} ${themeStyles?.text} shadow-lg backdrop-blur-md`}
-        aria-label="Settings"
-      >
-        <Settings size={20} />
-      </button>
+      {/* Floating Settings Button (Only visible if NOT in widget mode) */}
+      {!settings.isWidgetMode && (
+        <button 
+          onClick={() => setIsSettingsOpen(true)}
+          className={`fixed bottom-6 right-6 p-3 rounded-full z-40 transition-all duration-300 opacity-30 hover:opacity-100 ${themeStyles?.buttonBg} ${themeStyles?.text} shadow-lg backdrop-blur-md`}
+          aria-label="Settings"
+        >
+          <Settings size={20} />
+        </button>
+      )}
 
       {/* Main Content Area */}
       <main className="flex-1 w-full h-full flex items-center justify-center p-4 relative">
